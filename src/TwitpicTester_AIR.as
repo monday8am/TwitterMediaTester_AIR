@@ -3,10 +3,6 @@ package
 	import com.bit101.components.Label;
 	import com.bit101.components.PushButton;
 	import com.bit101.components.TextArea;
-	import com.hurlant.crypto.Crypto;
-	import com.hurlant.crypto.hash.HMAC;
-	import com.hurlant.util.Base64;
-	import com.hurlant.util.Hex;
 	import com.swfjunkie.tweetr.Tweetr;
 	import com.swfjunkie.tweetr.oauth.OAuth;
 	import com.swfjunkie.tweetr.oauth.events.OAuthEvent;
@@ -32,9 +28,6 @@ package
 	import flash.utils.ByteArray;
 	
 	import ru.inspirit.net.MultipartURLLoader;
-	
-	import services.UploadTwitPicOperation;
-	import services.UploadTwitterOperation;
 	
 	
 	
@@ -72,8 +65,6 @@ package
 		private var Picture				: Class;
 
 
-
-		
 		public function TwitpicTester_AIR()
 		{
 			// interface 
@@ -106,6 +97,11 @@ package
 			image_data = new BitmapData( picture.width, picture.height, false, 0xffffff );
 			image_data.draw( picture );
 			
+		}
+		
+		
+		public function loginOnTwitter():void
+		{
 			
 			// create objects
 			
@@ -124,13 +120,7 @@ package
 			htmlLoader.paintsDefaultBackground = false;
 			htmlLoader.stage.nativeWindow.alwaysInFront = true;
 			htmlLoader.addEventListener( Event.LOCATION_CHANGE, handleLocationChange );
-			oauth.htmlLoader = htmlLoader;	
-			
-		}
-		
-		
-		public function loginOnTwitter():void
-		{
+			oauth.htmlLoader = htmlLoader;				
 
 			oauth.getAuthorizationRequest();
 			
@@ -175,9 +165,8 @@ package
 		}	
 		
 		
-		private function postMediaToTwitpicV2():void
+		private function postMediaToTwitpic():void
 		{
-			
 			// create file data
 			
 			var myEncoder : JPEGEncoder = new JPEGEncoder( 80);
@@ -185,29 +174,30 @@ package
 			
 			// get credentials
 			
-			var signedData:String  = oauth.getSignedRequest( URLRequestMethod.POST, "https://upload.twitter.com/1/statuses/update_with_media.json", null );
-			var headerValue : String = createAuthorizationHeader( new URLVariables( signedData ) );
+			var signedData:String  = oauth.getSignedRequest( URLRequestMethod.GET, "http://api.twitter.com/1/account/verify_credentials.json", null );
+			var authHeaderValue : String = createAuthorizationHeader( new URLVariables( signedData ), "http://api.twitter.com/" );
 			
 			// create multipart loader
 			
 			var multipar_loader : MultipartURLLoader = new MultipartURLLoader();
-			multipar_loader.addEventListener( Event.COMPLETE, handleUploadComplete );	
+			multipar_loader.addEventListener( Event.COMPLETE, handleUploadTwitpicComplete );	
 			multipar_loader.addEventListener( IOErrorEvent.IO_ERROR, onError );
 			multipar_loader.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );					
 			
 			// add headers
 			
-			var auth_header : URLRequestHeader = new URLRequestHeader( "Authorization", headerValue );
-			multipar_loader.requestHeaders.push( auth_header );
+			multipar_loader.requestHeaders.push( new URLRequestHeader( "X-Verify-Credentials-Authorization", authHeaderValue ) );
+			multipar_loader.requestHeaders.push( new URLRequestHeader( "X-Auth-Service-Provider", "http://api.twitter.com/1/account/verify_credentials.json" ) );
 			
 			// add requeried data
 			
-			multipar_loader.addVariable( "status" , twitter_msg );
-			multipar_loader.addFile( byteArray, 'image.jpg', 'media[]');		
+			multipar_loader.addVariable( "key" , "cd887da0d073a83989b3df8fc0c4bd54" );
+			multipar_loader.addVariable( "message" , twitter_msg );
+			multipar_loader.addFile( byteArray, 'image.jpg', 'media');		
 			
 			// load
 			
-			multipar_loader.load( "https://upload.twitter.com/1/statuses/update_with_media.json" );	
+			multipar_loader.load( "http://api.twitpic.com/2/upload.json" );	
 			
 		}			
 		
@@ -254,32 +244,37 @@ package
 		}	
 		
 		
-		private function onCompleteUploadImage( event : Event ):void
-		{ 
-			var c : UploadTwitPicOperation = event.currentTarget as UploadTwitPicOperation;
-			
-			if( c.url_result != null )
-			{
-				twitpic_url =  c.url_result;
-			}
-			
-			// share url on twitter
-			
-			postInTwitter();			
-		}
-		
-		
 		private function handleLocationChange( e : Event ):void
 		{
 				
 		}	
 		
 		
+		private function handleUploadTwitpicComplete( event : Event ):void
+		{ 
+
+			log( "Image shared on twitpic" );
+			log( "Server response:" );
+			var serverResponse : String = MultipartURLLoader( event.currentTarget).loader.data;
+			log( serverResponse );
+			
+			var data : Object = JSON.parse( serverResponse );
+			if( data.url != null )
+			{
+				twitpic_url = data.url as String;
+				log( "Twitpic URL:" + twitpic_url );
+			}
+			
+			// share url on twitter
+			
+			postInTwitter();			
+		}		
+		
 		private function handleUploadComplete( event:Event):void
 		{
 			log( "Image shared on twitter" );
-			log( "Server response ( JSON ):" );
-			log( multipar_loader.loader.data );
+			log( "Server response:" );
+			log( MultipartURLLoader( event.currentTarget).loader.data );
 		}			
 		
 		
@@ -288,6 +283,7 @@ package
 			log( "Error uploading image" );
 			log( "Error ID: " + event.errorID );
 			log( "Error text: " + event.text );
+			log( MultipartURLLoader( event.currentTarget).loader.data );
 		}
 		
 		
@@ -300,7 +296,7 @@ package
 			
 			if( e.currentTarget == upload_twitpic )
 			{
-				postMediaToTwitpicV2();
+				postMediaToTwitpic();
 			}
 			
 			if( e.currentTarget == upload_twitter )
