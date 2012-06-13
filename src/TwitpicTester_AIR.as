@@ -69,13 +69,12 @@ package
 		{
 			// interface 
 			
-			label 			= new Label		( this, 30, 30, "Testing upload service " );
+			label 			= new Label		( this, 30, 30,  " Testing upload service " );
 			login_btn       = new PushButton( this, 30, 60,  " Login ", onPressBtn );
 			upload_twitpic 	= new PushButton( this, 30, 90,  " Upload Twitpic ", onPressBtn );
-			upload_twitter 	= new PushButton( this, 30, 120,  " Upload Twitter ", onPressBtn );
-			loadImage_btn 	= new PushButton( this, 30, 150,  " Change Image   ", onPressBtn );
-			logout_btn      = new PushButton( this, 30, 180,  " Logout ", onPressBtn );
-			label_events	= new TextArea( this, 150, 60, "logs... " ); label_events.width = 250; label_events.height = 211;
+			upload_twitter 	= new PushButton( this, 30, 120, " Upload Twitter ", onPressBtn );
+			logout_btn      = new PushButton( this, 30, 180, " Logout ", onPressBtn );
+			label_events	= new TextArea( this, 150, 60,   " logs...\n" ); label_events.width = 250; label_events.height = 211;
 			
 			
 			// define twitter windows style
@@ -84,7 +83,7 @@ package
 			windowOptions.type = NativeWindowType.NORMAL;
 			windowOptions.systemChrome = NativeWindowSystemChrome.STANDARD;
 			windowOptions.transparent = false;
-			windowOptions.resizable = false;
+			windowOptions.resizable   = false;
 			windowOptions.minimizable = false;		
 			
 			
@@ -106,12 +105,12 @@ package
 			// create objects
 			
 			tweetr = new Tweetr();
-			oauth = new OAuth();
+			oauth  = new OAuth();
 			
 			oauth.consumerKey 	 = "EgorZrtAG41qyHD4oYk0sw";
 			oauth.consumerSecret = "HbNexxZUDmM34oYL5B4aSVMLJnJJdojMXLssc0g3o";
 			oauth.callbackURL 	 = "http://www.monday8am.com";
-			oauth.pinlessAuth = true;
+			oauth.pinlessAuth 	 = true;
 			
 			oauth.addEventListener( OAuthEvent.COMPLETE, handleOAuthEvent );
 			oauth.addEventListener( OAuthEvent.ERROR,    handleOAuthEvent );			
@@ -144,24 +143,24 @@ package
 			
 			// create multipart loader
 			
-			var multipar_loader : MultipartURLLoader = new MultipartURLLoader();
-			multipar_loader.addEventListener( Event.COMPLETE, handleUploadComplete );	
-			multipar_loader.addEventListener( IOErrorEvent.IO_ERROR, onError );
-			multipar_loader.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );				
+			var multipartLoader : MultipartURLLoader = new MultipartURLLoader();
+			multipartLoader.addEventListener( Event.COMPLETE, handleUploadComplete );	
+			multipartLoader.addEventListener( IOErrorEvent.IO_ERROR, onError );
+			multipartLoader.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );				
 			
 			// add headers
 			
 			var auth_header : URLRequestHeader = new URLRequestHeader( "Authorization", headerValue );
-			multipar_loader.requestHeaders.push( auth_header );
+			multipartLoader.requestHeaders.push( auth_header );
 			
 			// add requeried data
 			
-			multipar_loader.addVariable( "status" , twitter_msg );
-			multipar_loader.addFile( byteArray, 'image.jpg', 'media[]');		
+			multipartLoader.addVariable( "status" , twitter_msg );
+			multipartLoader.addFile( byteArray, 'image.jpg', 'media[]');		
 			
 			// load
 			
-			multipar_loader.load( "https://upload.twitter.com/1/statuses/update_with_media.json" );
+			multipartLoader.load( "https://upload.twitter.com/1/statuses/update_with_media.json" );
 		}	
 		
 		
@@ -170,7 +169,7 @@ package
 			// create file data
 			
 			var myEncoder : JPEGEncoder = new JPEGEncoder( 80);
-			var byteArray : ByteArray = myEncoder.encode( image_data );		
+			var byteArray : ByteArray   = myEncoder.encode( image_data );		
 			
 			// get credentials
 			
@@ -179,25 +178,25 @@ package
 			
 			// create multipart loader
 			
-			var multipar_loader : MultipartURLLoader = new MultipartURLLoader();
-			multipar_loader.addEventListener( Event.COMPLETE, handleUploadTwitpicComplete );	
-			multipar_loader.addEventListener( IOErrorEvent.IO_ERROR, onError );
-			multipar_loader.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );					
+			var multipartLoader : MultipartURLLoader = new MultipartURLLoader();
+			multipartLoader.addEventListener( Event.COMPLETE, handleUploadTwitpicComplete );	
+			multipartLoader.addEventListener( IOErrorEvent.IO_ERROR, onError );
+			multipartLoader.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );					
 			
 			// add headers
 			
-			multipar_loader.requestHeaders.push( new URLRequestHeader( "X-Verify-Credentials-Authorization", authHeaderValue ) );
-			multipar_loader.requestHeaders.push( new URLRequestHeader( "X-Auth-Service-Provider", "http://api.twitter.com/1/account/verify_credentials.json" ) );
+			multipartLoader.requestHeaders.push( new URLRequestHeader( "X-Verify-Credentials-Authorization", authHeaderValue ) );
+			multipartLoader.requestHeaders.push( new URLRequestHeader( "X-Auth-Service-Provider", "http://api.twitter.com/1/account/verify_credentials.json" ) );
 			
 			// add requeried data
 			
-			multipar_loader.addVariable( "key" , "cd887da0d073a83989b3df8fc0c4bd54" );
-			multipar_loader.addVariable( "message" , twitter_msg );
-			multipar_loader.addFile( byteArray, 'image.jpg', 'media');		
+			multipartLoader.addVariable( "key" , "cd887da0d073a83989b3df8fc0c4bd54" );
+			multipartLoader.addVariable( "message" , twitter_msg );
+			multipartLoader.addFile( byteArray, 'image.jpg', 'media');		
 			
 			// load
 			
-			multipar_loader.load( "http://api.twitpic.com/2/upload.json" );	
+			multipartLoader.load( "http://api.twitpic.com/2/upload.json" );	
 			
 		}			
 		
