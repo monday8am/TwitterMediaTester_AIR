@@ -69,7 +69,6 @@
 		private var _fileNames:Array;
 		private var _variables:Dictionary;
 		private var _files:Dictionary;
-		private var _authHeaders:String = "";
 
 		private var _async:Boolean = false;
 		private var _path:String;
@@ -90,6 +89,7 @@
 			_variableNames = new Array();
 			_variables = new Dictionary();
 			_loader = new URLLoader();
+			
 			requestHeaders = new Array();
 		}
 
@@ -137,11 +137,6 @@
 			constructPostDataAsync();
 		}
 		
-		public function setAuthHeaders( _headers : String ):void
-		{
-			_authHeaders = _headers;
-		}
-
 		/**
 		 * Stop loader action
 		 */
@@ -167,6 +162,7 @@
 			_variables[name] = value;
 			_prepared = false;
 		}
+		
 
 		/**
 		 * Add file part to loader
@@ -291,7 +287,6 @@
 			urlRequest.method = URLRequestMethod.POST;
 			urlRequest.data = _data;
 			
-			urlRequest.requestHeaders.push( new URLRequestHeader('Authorization', _authHeaders )); 
 			urlRequest.requestHeaders.push( new URLRequestHeader('Content-type', 'multipart/form-data; boundary=' + getBoundary()) );
 			
 			if (requestHeaders.length)

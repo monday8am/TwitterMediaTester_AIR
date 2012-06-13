@@ -11,19 +11,27 @@ package
 	import com.swfjunkie.tweetr.oauth.OAuth;
 	import com.swfjunkie.tweetr.oauth.events.OAuthEvent;
 	
+	import file.JPEGEncoder;
+	
 	import flash.display.Bitmap;
 	import flash.display.BitmapData;
 	import flash.display.NativeWindowInitOptions;
 	import flash.display.NativeWindowSystemChrome;
 	import flash.display.NativeWindowType;
 	import flash.display.Sprite;
+	import flash.events.ErrorEvent;
 	import flash.events.Event;
+	import flash.events.IOErrorEvent;
 	import flash.events.MouseEvent;
+	import flash.events.SecurityErrorEvent;
 	import flash.geom.Rectangle;
 	import flash.html.HTMLLoader;
+	import flash.net.URLRequestHeader;
 	import flash.net.URLRequestMethod;
 	import flash.net.URLVariables;
 	import flash.utils.ByteArray;
+	
+	import ru.inspirit.net.MultipartURLLoader;
 	
 	import services.UploadTwitPicOperation;
 	import services.UploadTwitterOperation;
@@ -62,8 +70,9 @@ package
 		
 		[Embed(source="picture.jpg")]
 		private var Picture				: Class;
-		
-		
+
+
+
 		
 		public function TwitpicTester_AIR()
 		{
@@ -98,17 +107,10 @@ package
 			image_data.draw( picture );
 			
 			
-		}
-		
-		
-		public function loginOnTwitter():void
-		{
 			// create objects
 			
 			tweetr = new Tweetr();
 			oauth = new OAuth();
-			
-			// app data
 			
 			oauth.consumerKey 	 = "EgorZrtAG41qyHD4oYk0sw";
 			oauth.consumerSecret = "HbNexxZUDmM34oYL5B4aSVMLJnJJdojMXLssc0g3o";
@@ -122,55 +124,91 @@ package
 			htmlLoader.paintsDefaultBackground = false;
 			htmlLoader.stage.nativeWindow.alwaysInFront = true;
 			htmlLoader.addEventListener( Event.LOCATION_CHANGE, handleLocationChange );
+			oauth.htmlLoader = htmlLoader;	
 			
-			// get  oauthToken
-			
-			oauth.htmlLoader = htmlLoader;
+		}
+		
+		
+		public function loginOnTwitter():void
+		{
+
 			oauth.getAuthorizationRequest();
 			
+			log( "Tweetr and OAuth initialized" );
+			log( "Get authorization request" )
+			
 		}	
 		
 
-		private function uploadImageToTwitpic():void
-		{
-			
-			tweetr.updateStatus( "Testing more tweets :D :D" ); 
-			return;			
-			
-			var params : Object = new Object();
-			
-			params.consumer_token  = oauth.consumerKey;      // twitter Consumer Token.
-			params.consumer_secret = oauth.consumerSecret;   // twitter Consumer Secret.
-			params.oauth_token     = oauth.oauthToken; 		 // the Twitter OAuth Token for the user.
-			params.oauth_secret    = oauth.oauthTokenSecret; // the Twitter OAuth Secret for the user.
-			params.message         = twitter_msg;
-			
-			params.key = "cd887da0d073a83989b3df8fc0c4bd54"; // (Required): Your API Key.
-			
-			var c : UploadTwitPicOperation = new UploadTwitPicOperation( image_data, params );
-			c.addEventListener( Event.COMPLETE, onCompleteUploadImage );
-			c.execute();	
-			
-		}	
-		
-		
 		private function postMediaToTwitter():void
 		{
-
-			var params : Object = new Object();
-			var signedData:String  = oauth.getSignedRequest( URLRequestMethod.POST, 
-															 "https://upload.twitter.com/1/statuses/update_with_media.json", 
-															  null );
+			// create file data
 			
-			var url_vars : URLVariables = new URLVariables( signedData );
-			url_vars.status = twitter_msg;	
+			var myEncoder : JPEGEncoder = new JPEGEncoder( 80);
+			var byteArray : ByteArray = myEncoder.encode( image_data );		
 			
-			//OAuth oauth_consumer_key="mbmuCGVFTGHZOo5zr5Sx5A", oauth_nonce="f9685243ba64308204b1c14a05950b09", oauth_signature="LX%2BcnRvzT5Rm%2BYkPzdhX6I%2Bt9oo%3D", oauth_signature_method="HMAC-SHA1", oauth_timestamp="1313443626", oauth_token="119476949-KQjqYB1QCSC9ZtaTI8RRDDRJdSgk8hMcT4BJMEWi", oauth_version="1.0"			
-			var headers : String = createHeaders( url_vars );
+			// get credentials
 			
-			var c : UploadTwitterOperation = new UploadTwitterOperation( image_data, url_vars, headers );
-			c.addEventListener( Event.COMPLETE, onCompleteUploadImage );
-			c.execute();
+			var signedData:String  = oauth.getSignedRequest( URLRequestMethod.POST, "https://upload.twitter.com/1/statuses/update_with_media.json", null );
+			var headerValue : String = createAuthorizationHeader( new URLVariables( signedData ) );
+			
+			// create multipart loader
+			
+			var multipar_loader : MultipartURLLoader = new MultipartURLLoader();
+			multipar_loader.addEventListener( Event.COMPLETE, handleUploadComplete );	
+			multipar_loader.addEventListener( IOErrorEvent.IO_ERROR, onError );
+			multipar_loader.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );				
+			
+			// add headers
+			
+			var auth_header : URLRequestHeader = new URLRequestHeader( "Authorization", headerValue );
+			multipar_loader.requestHeaders.push( auth_header );
+			
+			// add requeried data
+			
+			multipar_loader.addVariable( "status" , twitter_msg );
+			multipar_loader.addFile( byteArray, 'image.jpg', 'media[]');		
+			
+			// load
+			
+			multipar_loader.load( "https://upload.twitter.com/1/statuses/update_with_media.json" );
+		}	
+		
+		
+		private function postMediaToTwitpicV2():void
+		{
+			
+			// create file data
+			
+			var myEncoder : JPEGEncoder = new JPEGEncoder( 80);
+			var byteArray : ByteArray = myEncoder.encode( image_data );		
+			
+			// get credentials
+			
+			var signedData:String  = oauth.getSignedRequest( URLRequestMethod.POST, "https://upload.twitter.com/1/statuses/update_with_media.json", null );
+			var headerValue : String = createAuthorizationHeader( new URLVariables( signedData ) );
+			
+			// create multipart loader
+			
+			var multipar_loader : MultipartURLLoader = new MultipartURLLoader();
+			multipar_loader.addEventListener( Event.COMPLETE, handleUploadComplete );	
+			multipar_loader.addEventListener( IOErrorEvent.IO_ERROR, onError );
+			multipar_loader.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onError );					
+			
+			// add headers
+			
+			var auth_header : URLRequestHeader = new URLRequestHeader( "Authorization", headerValue );
+			multipar_loader.requestHeaders.push( auth_header );
+			
+			// add requeried data
+			
+			multipar_loader.addVariable( "status" , twitter_msg );
+			multipar_loader.addFile( byteArray, 'image.jpg', 'media[]');		
+			
+			// load
+			
+			multipar_loader.load( "https://upload.twitter.com/1/statuses/update_with_media.json" );	
+			
 		}			
 		
 		
@@ -186,6 +224,7 @@ package
 		}
 		
 		
+		
 		/**
 		 *  Events handlers
 		 * 
@@ -198,11 +237,16 @@ package
 			{
 				htmlLoader.stage.nativeWindow.close();
 				tweetr.oAuth = oauth;
+				
+				log( "OAuth login successfull" );
+				log( "OAuth Token: " 	  + oauth.oauthToken);
+				log( "OAuth TokenSecret: " + oauth.oauthTokenSecret );		
 			}
 			
 			if (event.type == OAuthEvent.ERROR )
 			{
-				trace( "OauthEvent.ERROR :" + event.type.toLocaleUpperCase() );
+				log( "OAuth login error" );
+				log( "OAuthEvent.ERROR :" + event.type.toLocaleUpperCase() );
 			}
 			
 			oauth.removeEventListener( OAuthEvent.COMPLETE, handleOAuthEvent);
@@ -210,8 +254,8 @@ package
 		}	
 		
 		
-		private function onCompleteUploadImage(event:Event):void
-		{
+		private function onCompleteUploadImage( event : Event ):void
+		{ 
 			var c : UploadTwitPicOperation = event.currentTarget as UploadTwitPicOperation;
 			
 			if( c.url_result != null )
@@ -231,6 +275,22 @@ package
 		}	
 		
 		
+		private function handleUploadComplete( event:Event):void
+		{
+			log( "Image shared on twitter" );
+			log( "Server response ( JSON ):" );
+			log( multipar_loader.loader.data );
+		}			
+		
+		
+		private function onError( event : ErrorEvent ):void
+		{
+			log( "Error uploading image" );
+			log( "Error ID: " + event.errorID );
+			log( "Error text: " + event.text );
+		}
+		
+		
 		private function onPressBtn( e : MouseEvent ):void
 		{
 			if( e.currentTarget == login_btn )
@@ -240,7 +300,7 @@ package
 			
 			if( e.currentTarget == upload_twitpic )
 			{
-				uploadImageToTwitpic();
+				postMediaToTwitpicV2();
 			}
 			
 			if( e.currentTarget == upload_twitter )
@@ -252,9 +312,15 @@ package
 			{
 				logoutFromTwitter();
 			}				
-			
-		}		
+		}
 		
+		
+
+		/**
+		 * 
+		 *  Utils
+		 * 
+		 */
 		
 		private function log( str : String ):void
 		{
@@ -262,7 +328,7 @@ package
 		}
 		
 		
-		private function createHeaders( _requestParams : Object, headerRealm : String = "" ) : String
+		private function createAuthorizationHeader( _requestParams : Object, headerRealm : String = "" ) : String
 		{
 			var data:String = "";
 			
