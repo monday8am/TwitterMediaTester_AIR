@@ -14,6 +14,8 @@ package services
 	import flash.net.URLRequestMethod;
 	import flash.utils.ByteArray;
 	
+	import ru.inspirit.net.MultipartURLLoader;
+	
 	public class UploadTwitterOperation extends Operation
 	{
 		
@@ -23,14 +25,16 @@ package services
 		
 		private var image_data : BitmapData;
 		private var extra_params : Object;
-		public var url_result : String;
+		public  var url_result : String;
+		private var signedData : String;
 		
 		
-		public function UploadTwitterOperation( image_data : BitmapData, extra_params : Object )
+		public function UploadTwitterOperation( image_data : BitmapData, extra_params : Object, signedData : String  )
 		{
 			super();
 			this.image_data = image_data;
 			this.extra_params = extra_params;
+			this.signedData = signedData; 
 		}
 		
 		
@@ -40,25 +44,32 @@ package services
 			var myEncoder : JPEGEncoder = new JPEGEncoder( 80);
 			var byteArray : ByteArray = myEncoder.encode( image_data );
 			
-			urlRequest = new URLRequest( "https://upload.twitter.com/1/statuses/update_with_media.format" );
-			urlRequest.method = URLRequestMethod.POST;
-			urlRequest.contentType = 'multipart/form-data; boundary=' + UploadPostHelper.getBoundary();
-			urlRequest.data = UploadPostHelper.getPostData( "media", byteArray, extra_params );
-			urlRequest.requestHeaders.push( new URLRequestHeader( 'Cache-Control', 'no-cache' ) );
 			
-			urlLoader = new URLLoader();
-			urlLoader.dataFormat = URLLoaderDataFormat.BINARY;
-			urlLoader.addEventListener( Event.COMPLETE, handleComplete );
-			urlLoader.addEventListener( IOErrorEvent.IO_ERROR, onImageCreationError );
-			urlLoader.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onImageCreationError );
+			var multipar_loader : MultipartURLLoader = new MultipartURLLoader();
 			
-			urlLoader.load( urlRequest );	
+			multipar_loader.addEventListener( Event.COMPLETE, handleComplete);
+			multipar_loader.addEventListener( IOErrorEvent.IO_ERROR, onImageCreationError );
+			multipar_loader.addEventListener( SecurityErrorEvent.SECURITY_ERROR, onImageCreationError );			
+			
+			
+			// add variables
+			multipar_loader.setAuthHeaders( signedData );
+			
+			/**/
+			for (var nameValue : String in extra_params )
+			{
+				multipar_loader.addVariable( nameValue, extra_params[ nameValue] );
+			}
+			
+			// add file
+			
+			multipar_loader.addFile( byteArray, 'image.jpg', 'media[]');		
+			
+			// load
+			
+			multipar_loader.load( "https://upload.twitter.com/1/statuses/update_with_media.json" );
 		}
 		
-		private function onImageCreationError(event:Event):void 
-		{
-			handleFault(event);
-		}	
 		
 		/*
 		* 
@@ -76,6 +87,11 @@ package services
 			
 			dispatchEvent( new Event( Event.COMPLETE ) );
 		}
+		
+		private function onImageCreationError(event:Event):void 
+		{
+			handleFault(event);
+		}			
 		
 	}
 }

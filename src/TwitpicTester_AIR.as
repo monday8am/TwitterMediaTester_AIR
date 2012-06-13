@@ -3,6 +3,10 @@ package
 	import com.bit101.components.Label;
 	import com.bit101.components.PushButton;
 	import com.bit101.components.TextArea;
+	import com.hurlant.crypto.Crypto;
+	import com.hurlant.crypto.hash.HMAC;
+	import com.hurlant.util.Base64;
+	import com.hurlant.util.Hex;
 	import com.swfjunkie.tweetr.Tweetr;
 	import com.swfjunkie.tweetr.oauth.OAuth;
 	import com.swfjunkie.tweetr.oauth.events.OAuthEvent;
@@ -14,10 +18,15 @@ package
 	import flash.display.NativeWindowType;
 	import flash.display.Sprite;
 	import flash.events.Event;
+	import flash.events.MouseEvent;
 	import flash.geom.Rectangle;
 	import flash.html.HTMLLoader;
+	import flash.net.URLRequestMethod;
+	import flash.net.URLVariables;
+	import flash.utils.ByteArray;
 	
 	import services.UploadTwitPicOperation;
+	import services.UploadTwitterOperation;
 	
 	
 	
@@ -43,6 +52,8 @@ package
 		
 		private var label				: Label;
 		private var loadImage_btn 		: PushButton;
+		private var login_btn	 		: PushButton;
+		private var logout_btn	 		: PushButton;
 		private var upload_twitpic 		: PushButton;
 		private var upload_twitter 		: PushButton;
 		private var label_events    	: TextArea;
@@ -59,20 +70,23 @@ package
 			// interface 
 			
 			label 			= new Label		( this, 30, 30, "Testing upload service " );
-			upload_twitpic 	= new PushButton( this, 30, 60,  " Upload Twitpic ", onPressBtn );
-			upload_twitter 	= new PushButton( this, 30, 90,  " Upload Twitter ", onPressBtn );
-			loadImage_btn 	= new PushButton( this, 30, 120,  " Change Image   ", onPressBtn );
+			login_btn       = new PushButton( this, 30, 60,  " Login ", onPressBtn );
+			upload_twitpic 	= new PushButton( this, 30, 90,  " Upload Twitpic ", onPressBtn );
+			upload_twitter 	= new PushButton( this, 30, 120,  " Upload Twitter ", onPressBtn );
+			loadImage_btn 	= new PushButton( this, 30, 150,  " Change Image   ", onPressBtn );
+			logout_btn      = new PushButton( this, 30, 180,  " Logout ", onPressBtn );
 			label_events	= new TextArea( this, 150, 60, "logs... " ); label_events.width = 250; label_events.height = 211;
 			
 			
 			// define twitter windows style
 			
 			windowOptions = new NativeWindowInitOptions();
-			windowOptions.type = NativeWindowType.LIGHTWEIGHT;
-			windowOptions.systemChrome = NativeWindowSystemChrome.NONE;
-			windowOptions.transparent = true;
+			windowOptions.type = NativeWindowType.NORMAL;
+			windowOptions.systemChrome = NativeWindowSystemChrome.STANDARD;
+			windowOptions.transparent = false;
 			windowOptions.resizable = false;
 			windowOptions.minimizable = false;		
+			
 			
 			// create image data
 			
@@ -80,6 +94,8 @@ package
 			addChild( picture );
 			picture.x = 420;
 			picture.y = 60;
+			image_data = new BitmapData( picture.width, picture.height, false, 0xffffff );
+			image_data.draw( picture );
 			
 			
 		}
@@ -118,6 +134,9 @@ package
 		private function uploadImageToTwitpic():void
 		{
 			
+			tweetr.updateStatus( "Testing more tweets :D :D" ); 
+			return;			
+			
 			var params : Object = new Object();
 			
 			params.consumer_token  = oauth.consumerKey;      // twitter Consumer Token.
@@ -137,21 +156,21 @@ package
 		
 		private function postMediaToTwitter():void
 		{
-			
+
 			var params : Object = new Object();
+			var signedData:String  = oauth.getSignedRequest( URLRequestMethod.POST, 
+															 "https://upload.twitter.com/1/statuses/update_with_media.json", 
+															  null );
 			
-			params.consumer_token  = oauth.consumerKey;      // twitter Consumer Token.
-			params.consumer_secret = oauth.consumerSecret;   // twitter Consumer Secret.
-			params.oauth_token     = oauth.oauthToken; 		 // the Twitter OAuth Token for the user.
-			params.oauth_secret    = oauth.oauthTokenSecret; // the Twitter OAuth Secret for the user.
-			params.message         = twitter_msg;
+			var url_vars : URLVariables = new URLVariables( signedData );
+			url_vars.status = twitter_msg;	
 			
-			params.key = "cd887da0d073a83989b3df8fc0c4bd54"; // (Required): Your API Key.
+			//OAuth oauth_consumer_key="mbmuCGVFTGHZOo5zr5Sx5A", oauth_nonce="f9685243ba64308204b1c14a05950b09", oauth_signature="LX%2BcnRvzT5Rm%2BYkPzdhX6I%2Bt9oo%3D", oauth_signature_method="HMAC-SHA1", oauth_timestamp="1313443626", oauth_token="119476949-KQjqYB1QCSC9ZtaTI8RRDDRJdSgk8hMcT4BJMEWi", oauth_version="1.0"			
+			var headers : String = createHeaders( url_vars );
 			
-			var c : UploadTwitPicOperation = new UploadTwitPicOperation( image_data, params );
+			var c : UploadTwitterOperation = new UploadTwitterOperation( image_data, url_vars, headers );
 			c.addEventListener( Event.COMPLETE, onCompleteUploadImage );
-			c.execute();	
-			
+			c.execute();
 		}			
 		
 		
@@ -159,6 +178,12 @@ package
 		{
 			tweetr.updateStatus( twitter_msg + " " + twitpic_url );
 		}		
+		
+		
+		private function logoutFromTwitter():void
+		{
+			tweetr.endSession();
+		}
 		
 		
 		/**
@@ -173,10 +198,6 @@ package
 			{
 				htmlLoader.stage.nativeWindow.close();
 				tweetr.oAuth = oauth;
-				
-				// post in twit pic..
-				
-				uploadImageToTwitpic();
 			}
 			
 			if (event.type == OAuthEvent.ERROR )
@@ -209,15 +230,55 @@ package
 				
 		}	
 		
-		private function onPressBtn():void
+		
+		private function onPressBtn( e : MouseEvent ):void
 		{
-			// TODO Auto Generated method stub
+			if( e.currentTarget == login_btn )
+			{
+				loginOnTwitter();
+			}
+			
+			if( e.currentTarget == upload_twitpic )
+			{
+				uploadImageToTwitpic();
+			}
+			
+			if( e.currentTarget == upload_twitter )
+			{
+				postMediaToTwitter();
+			}			
+			
+			if( e.currentTarget == logout_btn )
+			{
+				logoutFromTwitter();
+			}				
 			
 		}		
+		
 		
 		private function log( str : String ):void
 		{
 			label_events.text += str + "\n";
+		}
+		
+		
+		private function createHeaders( _requestParams : Object, headerRealm : String = "" ) : String
+		{
+			var data:String = "";
+			
+			data += "OAuth "
+			if ( headerRealm.length > 0)
+				data += "realm=\"" + headerRealm + "\", ";
+			
+			for (var param : Object in _requestParams ) {
+				// if this is an oauth param, include it
+				if ( param.toString().indexOf("oauth") == 0) 
+				{
+					data += param + "=\"" + encodeURIComponent( _requestParams[param]) + "\", ";
+				}
+			}
+			
+			return data.substr( 0, data.length - 2);
 		}
 		
 	}

@@ -57,7 +57,7 @@ package file
 		/**
 		 * Create post data to send in a UrlRequest
 		 */
-		public static function getPostData(fileName:String, byteArray:ByteArray, parameters:Object = null):ByteArray {
+		public static function getPostData( fileName:String, byteArray:ByteArray, parameters:Object = null):ByteArray {
 
 			var i:int;
 			var bytes:String;

@@ -41,7 +41,6 @@ package services
 			urlRequest.method = URLRequestMethod.POST;
 			urlRequest.contentType = 'multipart/form-data; boundary=' + UploadPostHelper.getBoundary();
 			urlRequest.data = UploadPostHelper.getPostData( "media", byteArray, extra_params );
-			urlRequest.requestHeaders.push( new URLRequestHeader( 'Cache-Control', 'no-cache' ) );
 			
 			urlLoader = new URLLoader();
 			urlLoader.dataFormat = URLLoaderDataFormat.BINARY;
