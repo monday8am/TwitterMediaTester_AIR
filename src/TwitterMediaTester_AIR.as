@@ -32,7 +32,7 @@ package
 	
 	
 	[ SWF(backgroundColor="#ffffff", frameRate="24", width="700", height="300")]
-	public class TwitpicTester_AIR extends Sprite
+	public class TwitterMediaTester_AIR extends Sprite
 	{
 		
 		// twitter related
@@ -65,7 +65,7 @@ package
 		private var Picture				: Class;
 
 
-		public function TwitpicTester_AIR()
+		public function TwitterMediaTester_AIR()
 		{
 			// interface 
 			
@@ -243,12 +243,6 @@ package
 		}	
 		
 		
-		private function handleLocationChange( e : Event ):void
-		{
-				
-		}	
-		
-		
 		private function handleUploadTwitpicComplete( event : Event ):void
 		{ 
 
@@ -308,6 +302,12 @@ package
 				logoutFromTwitter();
 			}				
 		}
+		
+		
+		private function handleLocationChange( e : Event ):void
+		{
+			
+		}			
 		
 		
 
