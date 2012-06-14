@@ -107,9 +107,9 @@ package
 			tweetr = new Tweetr();
 			oauth  = new OAuth();
 			
-			oauth.consumerKey 	 = "EgorZrtAG41qyHD4oYk0sw";
-			oauth.consumerSecret = "HbNexxZUDmM34oYL5B4aSVMLJnJJdojMXLssc0g3o";
-			oauth.callbackURL 	 = "http://www.monday8am.com";
+			oauth.consumerKey 	 = "here your consumer !!";
+			oauth.consumerSecret = "here your consumer secret!!";
+			oauth.callbackURL 	 = "http://www.google.com";
 			oauth.pinlessAuth 	 = true;
 			
 			oauth.addEventListener( OAuthEvent.COMPLETE, handleOAuthEvent );
@@ -139,7 +139,7 @@ package
 			// get credentials
 			
 			var signedData:String  = oauth.getSignedRequest( URLRequestMethod.POST, "https://upload.twitter.com/1/statuses/update_with_media.json", null );
-			var headerValue : String = createAuthorizationHeader( new URLVariables( signedData ) );
+			var authHeaderValue : String = createAuthorizationHeader( new URLVariables( signedData ) );
 			
 			// create multipart loader
 			
@@ -150,7 +150,7 @@ package
 			
 			// add headers
 			
-			var auth_header : URLRequestHeader = new URLRequestHeader( "Authorization", headerValue );
+			var auth_header : URLRequestHeader = new URLRequestHeader( "Authorization", authHeaderValue );
 			multipartLoader.requestHeaders.push( auth_header );
 			
 			// add requeried data
