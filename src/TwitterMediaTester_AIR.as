@@ -190,7 +190,7 @@ package
 			
 			// add requeried data
 			
-			multipartLoader.addVariable( "key" , "cd887da0d073a83989b3df8fc0c4bd54" );
+			multipartLoader.addVariable( "key" , "here your twitpic app key!!" );
 			multipartLoader.addVariable( "message" , twitter_msg );
 			multipartLoader.addFile( byteArray, 'image.jpg', 'media');		
 			
